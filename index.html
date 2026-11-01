@@ -1,0 +1,1131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14110e">
+<title>Lamp Remote</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600&family=Martian+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one narrow column of lamp cards under a sticky bar; each card glows in its bulb's actual color.
+   Dark theme reads as a 2200 K evening room, light theme as 6500 K daylight. */
+:root {
+  --bg: #14110e;
+  --surface: #1d1915;
+  --surface-2: #28221c;
+  --line: #3b3229;
+  --fg: #f3ece2;
+  --muted: #a99b8c;
+  --accent: #ffb347;
+  --accent-ink: #1b1209;
+  --danger: #ff8a7a;
+  --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Figtree", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "Martian Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --radius: 18px;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #e6e9ed; --surface: #f6f7f9; --surface-2: #eceff3; --line: #cdd3da;
+    --fg: #1a1f25; --muted: #59636e; --accent: #9e5600; --accent-ink: #ffffff; --danger: #b3261e;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #e6e9ed; --surface: #f6f7f9; --surface-2: #eceff3; --line: #cdd3da;
+  --fg: #1a1f25; --muted: #59636e; --accent: #9e5600; --accent-ink: #ffffff; --danger: #b3261e;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--fg);
+  font: 400 16px/1.5 var(--font-body);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+[hidden] { display: none !important; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.wrap {
+  max-width: 560px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* Sticky bar */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto;
+  height: env(safe-area-inset-top, 0px);
+  z-index: 10;
+  background: var(--bg);
+}
+.bar {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 5;
+  background: color-mix(in srgb, var(--bg) 90%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.bar .wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-block: 14px;
+}
+h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.55rem;
+  line-height: 1.05;
+  letter-spacing: -0.015em;
+}
+.sub { color: var(--muted); font-size: .8rem; margin-top: 3px; }
+
+/* Buttons */
+.btn {
+  appearance: none;
+  min-height: 40px;
+  padding: 8px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--fg);
+  font-weight: 600;
+  font-size: .9rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn:hover:not(:disabled) { background: var(--surface-2); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.btn.primary:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 88%, var(--fg)); }
+.btn.wide { width: 100%; min-height: 50px; font-size: 1rem; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.link {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 6px 2px;
+  color: var(--muted);
+  font-size: .84rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.link.danger { color: var(--danger); }
+.link:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Page */
+main.wrap { display: flex; flex-direction: column; gap: 30px; padding-block: 20px 48px; }
+.section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+h2 { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: 1.1rem; text-wrap: balance; }
+.hint { margin: 0; color: var(--muted); font-size: .82rem; }
+.notice {
+  border: 1px solid color-mix(in srgb, var(--danger) 55%, var(--line));
+  background: var(--surface);
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-size: .92rem;
+}
+.notice strong { display: block; margin-bottom: 2px; }
+.notice p { margin: 0; }
+
+/* Scenes */
+.scenes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 360px) { .scenes { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.scene {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-height: 84px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  text-align: left;
+  cursor: pointer;
+}
+.scene:hover:not(:disabled) { background: var(--surface-2); }
+.scene:disabled { opacity: .45; cursor: not-allowed; }
+.scene .dot {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--c);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--c) 70%, transparent);
+}
+.scene .label { font-weight: 600; font-size: .92rem; line-height: 1.2; }
+.scene .spec { font-family: var(--font-mono); font-size: .64rem; color: var(--muted); letter-spacing: .02em; }
+
+/* Light cards */
+.lights { display: flex; flex-direction: column; gap: 12px; }
+.light {
+  --c: #888888;
+  --glow: 0px;
+  --tint: 0%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--c) var(--tint), var(--surface));
+  transition: background .35s ease;
+}
+.light-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; }
+.bulb {
+  width: 46px; height: 46px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: radial-gradient(circle at 36% 32%, rgba(255, 255, 255, .7), var(--c) 60%);
+  box-shadow: 0 0 var(--glow) color-mix(in srgb, var(--c) 75%, transparent);
+  cursor: pointer;
+  transition: box-shadow .35s ease, background .35s ease;
+}
+.light.off .bulb { background: var(--surface-2); box-shadow: none; }
+.bulb:disabled { cursor: not-allowed; }
+.meta { min-width: 0; }
+.name-line { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.name { font-weight: 600; font-size: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.name-input {
+  width: 100%;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--fg);
+  font: 600 1rem/1.4 var(--font-body);
+}
+.tag {
+  flex: none;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: .58rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.status { margin-top: 2px; color: var(--muted); font-family: var(--font-mono); font-size: .7rem; font-variant-numeric: tabular-nums; }
+.status.err { color: var(--danger); font-family: var(--font-body); font-size: .82rem; line-height: 1.35; }
+
+.switch {
+  position: relative;
+  flex: none;
+  width: 52px; height: 30px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-2);
+  cursor: pointer;
+  transition: background .2s;
+}
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: transform .2s, background .2s;
+}
+.switch[aria-checked="true"] { background: var(--accent); border-color: transparent; }
+.switch[aria-checked="true"]::after { transform: translateX(22px); background: var(--accent-ink); }
+.switch:disabled { opacity: .45; cursor: not-allowed; }
+
+.controls { display: flex; flex-direction: column; gap: 16px; }
+.light.down .controls { opacity: .45; }
+.ctl { display: flex; flex-direction: column; gap: 4px; }
+.ctl-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; color: var(--muted); font-size: .82rem; }
+.ctl-head output { color: var(--fg); font-family: var(--font-mono); font-size: .7rem; font-variant-numeric: tabular-nums; }
+
+input[type="range"] {
+  --track: var(--surface-2);
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 30px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+input[type="range"]:disabled { cursor: not-allowed; }
+input[type="range"]::-webkit-slider-runnable-track { height: 12px; border-radius: 999px; background: var(--track); border: 1px solid var(--line); }
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 26px; height: 26px;
+  margin-top: -8px;
+  border-radius: 50%;
+  border: 3px solid var(--bg);
+  background: var(--fg);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .35);
+}
+input[type="range"]::-moz-range-track { height: 12px; border-radius: 999px; background: var(--track); border: 1px solid var(--line); }
+input[type="range"]::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; border: 3px solid var(--bg); background: var(--fg); }
+
+.ticks { position: relative; height: 14px; color: var(--muted); font-family: var(--font-mono); font-size: .58rem; }
+.ticks span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
+.ticks span:first-child { transform: none; }
+.ticks span:last-child { transform: translateX(-100%); }
+
+.swatches { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); align-items: center; gap: 6px; padding-top: 4px; }
+.swatch, .picker { width: 100%; max-width: 40px; height: auto; aspect-ratio: 1; }
+.swatch {
+  padding: 0;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  outline: 1px solid var(--line);
+  background: var(--sw);
+  cursor: pointer;
+}
+.swatch[aria-pressed="true"] { outline: 2px solid var(--fg); outline-offset: 1px; }
+.swatch:disabled { cursor: not-allowed; }
+.picker {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border: 1px dashed var(--muted);
+  border-radius: 50%;
+  background: conic-gradient(from 90deg, #ff3b30, #ffcc00, #34c759, #00c7be, #007aff, #af52de, #ff3b30);
+  cursor: pointer;
+}
+.picker input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; padding: 0; cursor: pointer; }
+
+.light-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px 14px; }
+.light-foot .btn { margin-right: auto; min-height: 36px; padding: 6px 14px; font-size: .85rem; }
+
+.add-row { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 14px; }
+
+/* Help */
+details.help { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+details.help + details.help { margin-top: 10px; }
+details.help summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+details.help summary::-webkit-details-marker { display: none; }
+details.help summary::after { content: "+"; color: var(--muted); font-family: var(--font-mono); }
+details.help[open] summary::after { content: "\2212"; }
+.help-body { padding: 0 16px 16px; font-size: .92rem; max-width: 65ch; }
+.help-body ol, .help-body ul { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 8px; }
+.help-body p { margin: 0 0 8px; }
+.path { font-family: var(--font-mono); font-size: .78rem; }
+
+footer.wrap { padding-block: 0 32px; color: var(--muted); font-size: .8rem; }
+footer p { margin: 0 0 6px; max-width: 65ch; }
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 20;
+  width: max-content;
+  max-width: min(520px, calc(100% - 32px));
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--fg);
+  color: var(--bg);
+  font-size: .9rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .3);
+  transform: translateX(-50%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="wrap">
+    <div>
+      <h1>Lamp Remote</h1>
+      <div class="sub">Philips Hue Bluetooth bulbs, no bridge</div>
+    </div>
+    <button class="btn" id="all-power" type="button" disabled>All off</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="notice" id="support" hidden>
+    <strong>Bluetooth isn't available here</strong>
+    <p></p>
+  </div>
+
+  <section aria-labelledby="scenes-h">
+    <div class="section-head">
+      <h2 id="scenes-h">Scenes</h2>
+      <p class="hint">Applies to every connected light</p>
+    </div>
+    <div class="scenes" id="scenes"></div>
+  </section>
+
+  <section aria-labelledby="lights-h">
+    <div class="section-head">
+      <h2 id="lights-h">Lights</h2>
+      <p class="hint" id="light-count"></p>
+    </div>
+    <p class="hint" id="demo-note" style="margin-bottom:12px">These two are examples so you can try the controls. They disappear when you add your first bulb.</p>
+    <div class="lights" id="lights"></div>
+    <div class="add-row">
+      <button class="btn primary wide" id="add" type="button">Add a light</button>
+      <button class="link" id="add-all" type="button">Bulb not listed? Show every Bluetooth device</button>
+    </div>
+  </section>
+
+  <section aria-label="Help">
+    <details class="help">
+      <summary>Pairing a bulb</summary>
+      <div class="help-body">
+        <ol>
+          <li>Turn the bulb on at the wall switch and stay within about 30 feet of it.</li>
+          <li>In the Hue app, go to <span class="path">Settings › Voice assistants › Amazon Alexa (or Google Home) › Make discoverable</span>. A factory-reset bulb is also discoverable.</li>
+          <li>Close the Hue app so it isn't holding the bulb's connection.</li>
+          <li>Tap <strong>Add a light</strong>, pick the bulb, and accept Android's pairing request if one appears.</li>
+        </ol>
+      </div>
+    </details>
+    <details class="help">
+      <summary>If a bulb won't connect</summary>
+      <div class="help-body">
+        <ul>
+          <li><strong>Not in the list:</strong> tap "Show every Bluetooth device" and look for a name that starts with "Hue".</li>
+          <li><strong>Refused to pair:</strong> repeat step 2. The discoverable window only lasts a few minutes.</li>
+          <li><strong>Connected before, not now:</strong> make sure the wall switch is on, close the Hue app, and tap Try again on the card.</li>
+          <li><strong>Lights disappeared after clearing Chrome's data:</strong> add them again. Chrome forgets which bulbs this page may use.</li>
+        </ul>
+      </div>
+    </details>
+  </section>
+</main>
+
+<footer class="wrap">
+  <p>Your phone talks to each bulb directly over Bluetooth. Nothing goes through the internet, so control works only while you're near the lights.</p>
+  <p>Works in Chrome on Android, Windows and Mac. iPhone browsers can't use Bluetooth. To open it like an app, use Chrome's menu › Add to Home screen.</p>
+  <p>Unofficial and not made by Philips. A bulb firmware update could change how the bulbs respond.</p>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<template id="tpl-light">
+  <article class="light">
+    <div class="light-row">
+      <button class="bulb" type="button" data-act="toggle" aria-label="Turn on or off"></button>
+      <div class="meta">
+        <div class="name-line"><span class="name"></span><span class="tag" hidden>Example</span></div>
+        <div class="status"></div>
+      </div>
+      <button class="switch" type="button" role="switch" aria-checked="false" data-act="toggle"><span class="sr">Power</span></button>
+    </div>
+    <div class="controls">
+      <div class="ctl" data-ctl="bri">
+        <div class="ctl-head"><label data-for="bri">Brightness</label><output></output></div>
+        <input type="range" min="1" max="100" step="1" data-input="bri">
+      </div>
+      <div class="ctl" data-ctl="temp">
+        <div class="ctl-head"><label data-for="temp">White</label><output></output></div>
+        <input type="range" min="0" max="347" step="1" data-input="temp">
+        <div class="ticks" aria-hidden="true">
+          <span style="left:0%">2000 K</span>
+          <span style="left:37.5%">2700 K</span>
+          <span style="left:72%">4000 K</span>
+          <span style="left:100%">6500 K</span>
+        </div>
+      </div>
+      <div class="ctl" data-ctl="xy">
+        <div class="ctl-head"><span>Color</span><output></output></div>
+        <div class="swatches"></div>
+      </div>
+    </div>
+    <div class="light-foot">
+      <button class="btn primary" type="button" data-act="connect" hidden>Connect</button>
+      <button class="link" type="button" data-act="rename">Rename</button>
+      <button class="link danger" type="button" data-act="forget">Remove</button>
+    </div>
+  </article>
+</template>
+
+<script>
+(() => {
+  "use strict";
+
+  // ---- Hue Bluetooth protocol (as used by the Hue app; documented by the open-source HueBLE project) ----
+  const SERVICE = "932c32bd-0000-47a2-835a-a8d455b859dd";
+  const ADVERT = 0xfe0f; // service every Hue bulb advertises
+  const UUID = {
+    power: "932c32bd-0002-47a2-835a-a8d455b859dd", // 1 byte: 0 off, 1 on
+    bri:   "932c32bd-0003-47a2-835a-a8d455b859dd", // 1 byte: 1-254
+    temp:  "932c32bd-0004-47a2-835a-a8d455b859dd", // uint16 LE mireds 153-500, 0xFFFF in color mode
+    xy:    "932c32bd-0005-47a2-835a-a8d455b859dd"  // 2x uint16 LE CIE x,y scaled to 0xFFFF
+  };
+  const MIRED_WARM = 500, MIRED_COOL = 153;
+  const STORE_KEY = "lamp-remote.v1";
+
+  const SCENES = [
+    { id: "energize", label: "Energize", k: 6500, pct: 100 },
+    { id: "read", label: "Read", k: 4300, pct: 100 },
+    { id: "relax", label: "Relax", k: 2700, pct: 55 },
+    { id: "movie", label: "Movie", k: 2200, pct: 20 },
+    { id: "ember", label: "Ember", hex: "#ff6a1f", k: 2000, pct: 35 },
+    { id: "night", label: "Nightlight", k: 2000, pct: 3 }
+  ];
+  const SWATCHES = [
+    ["Red", "#ff2a1a"], ["Orange", "#ff7a1a"], ["Gold", "#ffc43d"], ["Green", "#38d65a"],
+    ["Teal", "#1fd1c5"], ["Blue", "#2f62ff"], ["Violet", "#8a4dff"], ["Pink", "#ff4fa3"]
+  ];
+
+  // ---- Color math ----
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+  const kToMired = k => Math.round(1e6 / k);
+  const miredToK = m => Math.round(1e6 / m / 50) * 50;
+  const pctToByte = p => clamp(Math.round(p * 2.54), 1, 254);
+  const byteToPct = b => clamp(Math.round(b / 2.54), 1, 100);
+
+  function kelvinRgb(k) {
+    const t = k / 100;
+    let r, g, b;
+    if (t <= 66) {
+      r = 255;
+      g = 99.4708025861 * Math.log(t) - 161.1195681661;
+      b = t <= 19 ? 0 : 138.5177312231 * Math.log(t - 10) - 305.0447927307;
+    } else {
+      r = 329.698727446 * Math.pow(t - 60, -0.1332047592);
+      g = 288.1221695283 * Math.pow(t - 60, -0.0755148492);
+      b = 255;
+    }
+    return [r, g, b].map(v => Math.round(clamp(v, 0, 255)));
+  }
+  function hexToRgb(hex) {
+    const n = parseInt(hex.slice(1), 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  function rgbToHex(rgb) {
+    return "#" + rgb.map(v => clamp(Math.round(v), 0, 255).toString(16).padStart(2, "0")).join("");
+  }
+  function rgbToXy(rgb) {
+    const lin = v => { v /= 255; return v > 0.04045 ? Math.pow((v + 0.055) / 1.055, 2.4) : v / 12.92; };
+    const [R, G, B] = rgb.map(lin);
+    const X = R * 0.4124 + G * 0.3576 + B * 0.1805;
+    const Y = R * 0.2126 + G * 0.7152 + B * 0.0722;
+    const Z = R * 0.0193 + G * 0.1192 + B * 0.9505;
+    const s = X + Y + Z;
+    return s === 0 ? [0.3127, 0.329] : [X / s, Y / s];
+  }
+  function xyToRgb(xy) {
+    const [x, y] = xy;
+    if (y <= 0) return [255, 255, 255];
+    const Y = 1, X = (Y / y) * x, Z = (Y / y) * (1 - x - y);
+    const lin = [
+      X * 3.2406 - Y * 1.5372 - Z * 0.4986,
+      -X * 0.9689 + Y * 1.8758 + Z * 0.0415,
+      X * 0.0557 - Y * 0.204 + Z * 1.057
+    ].map(v => Math.max(0, v));
+    const m = Math.max(...lin) || 1;
+    return lin.map(v => {
+      v /= m;
+      v = v <= 0.0031308 ? 12.92 * v : 1.055 * Math.pow(v, 1 / 2.4) - 0.055;
+      return Math.round(clamp(v, 0, 1) * 255);
+    });
+  }
+  const near = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]) < 0.012;
+
+  // ---- Storage (names only; Chrome itself remembers which bulbs this page may use) ----
+  function loadStore() {
+    try { const s = JSON.parse(localStorage.getItem(STORE_KEY)); if (s && s.names) return s; } catch (e) {}
+    return { names: {} };
+  }
+  const store = loadStore();
+  function saveStore() { try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch (e) {} }
+
+  // ---- State ----
+  const lights = new Map();
+  let cardSeq = 0;
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const listEl = $("#lights");
+
+  function makeLight({ id, name, device = null, demo = false, caps, state }) {
+    return {
+      id, name, device, demo,
+      caps: caps || { bri: false, temp: false, xy: false },
+      state: Object.assign({ on: false, bri: 180, mired: 370, xy: null, mode: "temp" }, state || {}),
+      status: demo ? "demo" : "disconnected",
+      error: "",
+      chars: {},
+      pending: new Map(),
+      busy: false,
+      listening: false,
+      subscribed: new WeakSet(),
+      manualDisconnect: false,
+      retried: false,
+      el: null
+    };
+  }
+  function addDemos() {
+    [
+      { id: "demo-1", name: "Living room lamp", caps: { bri: true, temp: true, xy: true },
+        state: { on: true, bri: pctToByte(70), mired: kToMired(2700), mode: "temp" } },
+      { id: "demo-2", name: "Bedroom lamp", caps: { bri: true, temp: true, xy: false },
+        state: { on: false, bri: pctToByte(40), mired: kToMired(2200), mode: "temp" } }
+    ].forEach(d => { const l = makeLight(Object.assign({ demo: true }, d)); lights.set(l.id, l); });
+  }
+  const hasDemos = () => [...lights.values()].some(l => l.demo);
+  function removeDemos() {
+    let changed = false;
+    for (const l of [...lights.values()]) if (l.demo) { lights.delete(l.id); changed = true; }
+    if (changed) renderAll();
+  }
+  const canControl = l => l.demo || l.status === "connected";
+
+  // ---- Bluetooth writes: one at a time per bulb, latest value wins ----
+  function timeout(promise, ms, message) {
+    let t;
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        t = setTimeout(() => {
+          const e = new Error(message || "Timed out");
+          e.name = "TimeoutError";
+          reject(e);
+        }, ms);
+      })
+    ]).finally(() => clearTimeout(t));
+  }
+  function send(l, key, bytes) {
+    if (l.demo || !l.chars[key]) return;
+    l.pending.delete(key);
+    l.pending.set(key, bytes);
+    if (!l.busy) pump(l);
+  }
+  async function pump(l) {
+    l.busy = true;
+    try {
+      while (l.pending.size && l.status === "connected") {
+        const [key, bytes] = l.pending.entries().next().value;
+        l.pending.delete(key);
+        const ch = l.chars[key];
+        if (!ch) continue;
+        const p = ch.writeValueWithResponse ? ch.writeValueWithResponse(bytes) : ch.writeValue(bytes);
+        await timeout(p, 6000);
+      }
+    } catch (err) {
+      l.pending.clear();
+      fail(l, err);
+      updateCard(l);
+      updateBar();
+    } finally {
+      l.busy = false;
+    }
+  }
+  const u8 = n => new Uint8Array([n]);
+  function u16(n) { const b = new Uint8Array(2); new DataView(b.buffer).setUint16(0, n, true); return b; }
+
+  function writePower(l, on) { l.state.on = on; send(l, "power", u8(on ? 1 : 0)); }
+  function writeBri(l, byte) { l.state.bri = byte; send(l, "bri", u8(byte)); }
+  function writeMired(l, m) {
+    m = clamp(Math.round(m), MIRED_COOL, MIRED_WARM);
+    l.state.mired = m; l.state.mode = "temp";
+    send(l, "temp", u16(m));
+  }
+  function writeXy(l, xy) {
+    l.state.xy = xy; l.state.mode = "color";
+    const b = new Uint8Array(4), dv = new DataView(b.buffer);
+    dv.setUint16(0, Math.round(clamp(xy[0], 0, 1) * 0xffff), true);
+    dv.setUint16(2, Math.round(clamp(xy[1], 0, 1) * 0xffff), true);
+    send(l, "xy", b);
+  }
+  function ensureOn(l) { if (!l.state.on) writePower(l, true); }
+
+  // ---- Connecting ----
+  function explain(err) {
+    const name = err && err.name;
+    const msg = ((err && err.message) || "").toLowerCase();
+    if (name === "NotHueError") return "Connected, but this device doesn't answer like a Hue bulb.";
+    if (name === "SecurityError") return "Chrome blocked Bluetooth on this page. Open it directly in Chrome, not inside another app.";
+    if (name === "TimeoutError") return "The bulb didn't answer. Move closer, close the Hue app, and tap Try again.";
+    if (/auth|encrypt|pair|bond|insufficient|unknown reason/.test(msg)) {
+      return "The bulb didn't accept the connection. Make it discoverable in the Hue app, then tap Try again.";
+    }
+    if (name === "NotFoundError") return "Connected, but couldn't find the light controls on this device.";
+    if (name === "NetworkError") return "Lost the bulb. Check the wall switch is on, close the Hue app, and tap Try again.";
+    return "Couldn't talk to the bulb (" + ((err && err.message) || "unknown error") + "). Tap Try again.";
+  }
+  function fail(l, err) {
+    console.warn("[Lamp Remote]", l.name, err);
+    l.status = "error";
+    l.error = explain(err);
+  }
+
+  async function connectLight(l) {
+    if (!l.device || l.status === "connecting") return;
+    l.status = "connecting"; l.error = ""; l.manualDisconnect = false;
+    updateCard(l); updateBar();
+    try {
+      if (!l.listening) {
+        l.device.addEventListener("gattserverdisconnected", () => onDisconnected(l));
+        l.listening = true;
+      }
+      const server = await timeout(l.device.gatt.connect(), 15000, "Connect timed out");
+      const svc = await timeout(server.getPrimaryService(SERVICE), 10000, "Service lookup timed out");
+      const chars = {};
+      for (const [key, uuid] of Object.entries(UUID)) {
+        try { chars[key] = await svc.getCharacteristic(uuid); } catch (e) { /* this bulb lacks the feature */ }
+      }
+      if (!chars.power) { const e = new Error("No power control"); e.name = "NotHueError"; throw e; }
+      l.chars = chars;
+      l.caps = { bri: !!chars.bri, temp: !!chars.temp, xy: !!chars.xy };
+      await readState(l);
+      l.status = "connected"; l.retried = false;
+      await subscribe(l);
+      removeDemos();
+    } catch (err) {
+      fail(l, err);
+      l.manualDisconnect = true;
+      try { if (l.device.gatt.connected) l.device.gatt.disconnect(); } catch (e) {}
+    }
+    updateCard(l); updateBar();
+  }
+
+  async function readState(l) {
+    const c = l.chars, s = l.state;
+    // The first read is what triggers Android's pairing prompt, so give it room.
+    const p = await timeout(c.power.readValue(), 20000, "Read timed out");
+    s.on = p.getUint8(0) === 1;
+    if (c.bri) { try { s.bri = (await c.bri.readValue()).getUint8(0) || 1; } catch (e) {} }
+    if (c.temp) {
+      try {
+        const m = (await c.temp.readValue()).getUint16(0, true);
+        if (m >= MIRED_COOL && m <= MIRED_WARM) { s.mired = m; s.mode = "temp"; }
+      } catch (e) {}
+    }
+    if (c.xy) {
+      try {
+        const d = await c.xy.readValue();
+        if (d.byteLength >= 4) {
+          const x = d.getUint16(0, true), y = d.getUint16(2, true);
+          if (!(x === 0xffff && y === 0xffff)) { s.xy = [x / 0xffff, y / 0xffff]; s.mode = "color"; }
+        }
+      } catch (e) {}
+    }
+  }
+
+  async function subscribe(l) {
+    const watch = async (key, apply) => {
+      const ch = l.chars[key];
+      if (!ch || !ch.properties.notify) return;
+      if (!l.subscribed.has(ch)) {
+        ch.addEventListener("characteristicvaluechanged", e => {
+          try { apply(e.target.value); } catch (err) {}
+          updateCard(l); updateBar();
+        });
+        l.subscribed.add(ch);
+      }
+      try { await ch.startNotifications(); } catch (e) {}
+    };
+    await watch("power", d => { l.state.on = d.getUint8(0) === 1; });
+    await watch("bri", d => { l.state.bri = d.getUint8(0) || 1; });
+    await watch("temp", d => {
+      const m = d.getUint16(0, true);
+      if (m >= MIRED_COOL && m <= MIRED_WARM) { l.state.mired = m; l.state.mode = "temp"; }
+    });
+    await watch("xy", d => {
+      if (d.byteLength < 4) return;
+      const x = d.getUint16(0, true), y = d.getUint16(2, true);
+      if (!(x === 0xffff && y === 0xffff)) { l.state.xy = [x / 0xffff, y / 0xffff]; l.state.mode = "color"; }
+    });
+  }
+
+  function onDisconnected(l) {
+    l.chars = {}; l.pending.clear(); l.busy = false;
+    if (l.status === "error" || l.manualDisconnect || !lights.has(l.id)) { updateCard(l); updateBar(); return; }
+    l.status = "disconnected";
+    updateCard(l); updateBar();
+    if (!l.retried) {
+      l.retried = true;
+      setTimeout(() => { if (l.status === "disconnected" && lights.has(l.id)) connectLight(l); }, 1500);
+    }
+  }
+
+  async function addLight(showAll) {
+    if (!navigator.bluetooth) return;
+    let device;
+    try {
+      device = await navigator.bluetooth.requestDevice(
+        showAll ? { acceptAllDevices: true, optionalServices: [SERVICE] }
+                : { filters: [{ services: [ADVERT] }], optionalServices: [SERVICE] }
+      );
+    } catch (err) {
+      if (err && err.name === "NotFoundError") return; // chooser closed
+      toast(explain(err));
+      return;
+    }
+    let l = lights.get(device.id);
+    if (!l) {
+      l = makeLight({ id: device.id, name: store.names[device.id] || device.name || "Hue light", device });
+      lights.set(l.id, l);
+      store.names[l.id] = l.name;
+      saveStore();
+      renderAll();
+    } else {
+      l.device = device;
+    }
+    await connectLight(l);
+    if (l.status === "connected") toast(l.name + " connected.");
+  }
+
+  async function restore() {
+    if (!navigator.bluetooth || !navigator.bluetooth.getDevices) return;
+    let devices = [];
+    try { devices = await navigator.bluetooth.getDevices(); } catch (e) { return; }
+    if (!devices.length) return;
+    removeDemos();
+    for (const d of devices) {
+      if (lights.has(d.id)) continue;
+      const l = makeLight({ id: d.id, name: store.names[d.id] || d.name || "Hue light", device: d });
+      lights.set(l.id, l);
+    }
+    renderAll();
+    for (const l of lights.values()) if (!l.demo) await connectLight(l);
+  }
+
+  // ---- UI ----
+  function lightRgb(l) {
+    const s = l.state;
+    if (s.mode === "color" && s.xy) return xyToRgb(s.xy);
+    return kelvinRgb(1e6 / s.mired);
+  }
+  function statusText(l) {
+    if (l.status === "connecting") return "Connecting…";
+    if (l.status === "error") return l.error;
+    if (l.status === "disconnected") return "Not connected";
+    const s = l.state;
+    if (!s.on) return "Off";
+    return "On · " + byteToPct(s.bri) + "% · " + (s.mode === "color" && s.xy ? "Color" : miredToK(s.mired) + " K");
+  }
+
+  const TEMP_TRACK = "linear-gradient(90deg, " +
+    [2000, 2400, 2900, 3500, 4300, 5300, 6500].map(k => rgbToHex(kelvinRgb(k))).join(", ") + ")";
+
+  function buildCard(l) {
+    const el = $("#tpl-light").content.firstElementChild.cloneNode(true);
+    const n = ++cardSeq;
+    el.dataset.id = l.id;
+    el.querySelectorAll("label[data-for]").forEach(lab => {
+      const key = lab.dataset.for;
+      const input = el.querySelector('[data-input="' + key + '"]');
+      input.id = key + "-" + n;
+      lab.htmlFor = input.id;
+    });
+    el.querySelector('[data-input="temp"]').style.setProperty("--track", TEMP_TRACK);
+    const sw = el.querySelector(".swatches");
+    for (const [label, hex] of SWATCHES) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "swatch";
+      b.dataset.act = "swatch";
+      b.dataset.hex = hex;
+      b.style.setProperty("--sw", hex);
+      b.setAttribute("aria-label", label);
+      b.setAttribute("aria-pressed", "false");
+      sw.appendChild(b);
+    }
+    const picker = document.createElement("label");
+    picker.className = "picker";
+    picker.title = "Pick any color";
+    const ci = document.createElement("input");
+    ci.type = "color";
+    ci.id = "color-" + n;
+    ci.dataset.input = "color";
+    ci.value = "#ff8800";
+    ci.setAttribute("aria-label", "Pick any color");
+    picker.appendChild(ci);
+    sw.appendChild(picker);
+    return el;
+  }
+
+  function updateCard(l) {
+    const el = l.el;
+    if (!el) return;
+    const s = l.state, live = canControl(l), on = s.on && live;
+    const rgb = lightRgb(l), hex = rgbToHex(rgb);
+    const f = on ? 0.25 + 0.75 * (s.bri / 254) : 0;
+    el.classList.toggle("off", !on);
+    el.classList.toggle("down", !live);
+    el.style.setProperty("--c", hex);
+    el.style.setProperty("--glow", Math.round(6 + 28 * f) + "px");
+    el.style.setProperty("--tint", Math.round(f * 12) + "%");
+
+    $(".name", el).textContent = l.name;
+    $(".tag", el).hidden = !l.demo;
+    const st = $(".status", el);
+    st.textContent = statusText(l);
+    st.classList.toggle("err", l.status === "error");
+
+    const bulb = $(".bulb", el), sw = $(".switch", el);
+    bulb.disabled = sw.disabled = !live;
+    bulb.setAttribute("aria-label", (s.on ? "Turn off " : "Turn on ") + l.name);
+    sw.setAttribute("aria-checked", String(on));
+
+    const bctl = $('[data-ctl="bri"]', el), bri = $('[data-input="bri"]', el);
+    bctl.hidden = !l.caps.bri;
+    if (document.activeElement !== bri) bri.value = byteToPct(s.bri);
+    bri.disabled = !live;
+    bri.style.setProperty("--track", "linear-gradient(90deg, " + rgbToHex(rgb.map(v => v * 0.2)) + ", " + hex + ")");
+    $("output", bctl).textContent = byteToPct(s.bri) + "%";
+
+    const tctl = $('[data-ctl="temp"]', el), temp = $('[data-input="temp"]', el);
+    tctl.hidden = !l.caps.temp;
+    if (document.activeElement !== temp) temp.value = MIRED_WARM - s.mired;
+    temp.disabled = !live;
+    $("output", tctl).textContent = s.mode === "temp" ? miredToK(s.mired) + " K · " + s.mired + " mired" : "Using color";
+
+    const xctl = $('[data-ctl="xy"]', el);
+    xctl.hidden = !l.caps.xy;
+    const colorOn = s.mode === "color" && s.xy;
+    xctl.querySelectorAll(".swatch").forEach(b => {
+      b.disabled = !live;
+      b.setAttribute("aria-pressed", String(!!(colorOn && near(s.xy, rgbToXy(hexToRgb(b.dataset.hex))))));
+    });
+    const ci = $('input[type="color"]', xctl);
+    ci.disabled = !live;
+    if (colorOn && document.activeElement !== ci) ci.value = hex;
+    $("output", xctl).textContent = colorOn ? "x " + s.xy[0].toFixed(3) + " · y " + s.xy[1].toFixed(3) : "Using white";
+
+    const cb = $('[data-act="connect"]', el);
+    cb.hidden = l.demo || l.status === "connected" || l.status === "connecting";
+    cb.textContent = l.status === "error" ? "Try again" : "Connect";
+  }
+
+  function renderAll() {
+    for (const card of [...listEl.children]) if (!lights.has(card.dataset.id)) card.remove();
+    for (const l of lights.values()) {
+      if (!l.el) l.el = buildCard(l);
+      if (l.el.parentNode !== listEl) listEl.appendChild(l.el);
+      updateCard(l);
+    }
+    $("#demo-note").hidden = !hasDemos();
+    updateBar();
+  }
+
+  function updateBar() {
+    const all = [...lights.values()];
+    const live = all.filter(canControl);
+    const anyOn = live.some(l => l.state.on);
+    const btn = $("#all-power");
+    btn.disabled = !live.length;
+    btn.textContent = anyOn ? "All off" : "All on";
+    document.querySelectorAll(".scene").forEach(b => { b.disabled = !live.length; });
+    const real = all.filter(l => !l.demo);
+    $("#light-count").textContent = real.length
+      ? real.filter(l => l.status === "connected").length + " of " + real.length + " connected"
+      : "";
+  }
+
+  function buildScenes() {
+    const box = $("#scenes");
+    for (const sc of SCENES) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "scene";
+      b.dataset.scene = sc.id;
+      const dotColor = sc.hex || rgbToHex(kelvinRgb(sc.k));
+      b.innerHTML = '<span class="dot"></span><span class="label"></span><span class="spec"></span>';
+      b.querySelector(".dot").style.setProperty("--c", dotColor);
+      b.querySelector(".label").textContent = sc.label;
+      b.querySelector(".spec").textContent = (sc.hex ? "Color" : sc.k + " K") + " · " + sc.pct + "%";
+      box.appendChild(b);
+    }
+  }
+  function applyScene(sc) {
+    const live = [...lights.values()].filter(canControl);
+    if (!live.length) return;
+    for (const l of live) {
+      writePower(l, true);
+      if (sc.hex && l.caps.xy) writeXy(l, rgbToXy(hexToRgb(sc.hex)));
+      else if (l.caps.temp) writeMired(l, kToMired(sc.k));
+      if (l.caps.bri) writeBri(l, pctToByte(sc.pct));
+      updateCard(l);
+    }
+    updateBar();
+    toast(sc.label + " on " + live.length + (live.length === 1 ? " light." : " lights."));
+  }
+
+  function startRename(l) {
+    const el = l.el, nameEl = $(".name", el);
+    if ($(".name-input", el)) return;
+    const inp = document.createElement("input");
+    inp.className = "name-input";
+    inp.id = "rename-" + l.id.replace(/[^a-zA-Z0-9-]/g, "");
+    inp.value = l.name;
+    inp.maxLength = 32;
+    inp.setAttribute("aria-label", "Light name");
+    nameEl.hidden = true;
+    nameEl.after(inp);
+    inp.focus();
+    inp.select();
+    let done = false;
+    const finish = save => {
+      if (done) return;
+      done = true;
+      const v = inp.value.trim();
+      if (save && v) {
+        l.name = v;
+        if (!l.demo) { store.names[l.id] = v; saveStore(); }
+      }
+      inp.remove();
+      nameEl.hidden = false;
+      updateCard(l);
+    };
+    inp.addEventListener("keydown", e => {
+      if (e.key === "Enter") { e.preventDefault(); finish(true); }
+      if (e.key === "Escape") finish(false);
+    });
+    inp.addEventListener("blur", () => finish(true));
+  }
+
+  async function removeLight(l, btn) {
+    if (btn.dataset.armed !== "1") {
+      btn.dataset.armed = "1";
+      btn.textContent = "Tap again to remove";
+      setTimeout(() => { btn.dataset.armed = ""; btn.textContent = "Remove"; }, 3000);
+      return;
+    }
+    lights.delete(l.id);
+    if (!l.demo) {
+      l.manualDisconnect = true;
+      try { if (l.device && l.device.gatt.connected) l.device.gatt.disconnect(); } catch (e) {}
+      try { if (l.device && l.device.forget) await l.device.forget(); } catch (e) {}
+      delete store.names[l.id];
+      saveStore();
+    }
+    if (!lights.size) addDemos();
+    renderAll();
+  }
+
+  let toastTimer;
+  function toast(msg) {
+    const t = $("#toast");
+    t.textContent = msg;
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.hidden = true; }, 4500);
+  }
+
+  // ---- Events ----
+  listEl.addEventListener("click", e => {
+    const btn = e.target.closest("[data-act]");
+    if (!btn) return;
+    const card = btn.closest(".light");
+    const l = card && lights.get(card.dataset.id);
+    if (!l) return;
+    const act = btn.dataset.act;
+    if (act === "toggle") {
+      if (!canControl(l)) return;
+      writePower(l, !l.state.on);
+    } else if (act === "swatch") {
+      if (!canControl(l)) return;
+      ensureOn(l);
+      writeXy(l, rgbToXy(hexToRgb(btn.dataset.hex)));
+    } else if (act === "connect") {
+      connectLight(l);
+      return;
+    } else if (act === "rename") {
+      startRename(l);
+      return;
+    } else if (act === "forget") {
+      removeLight(l, btn);
+      return;
+    }
+    updateCard(l);
+    updateBar();
+  });
+
+  listEl.addEventListener("input", e => {
+    const inp = e.target;
+    const key = inp.dataset && inp.dataset.input;
+    if (!key) return;
+    const card = inp.closest(".light");
+    const l = card && lights.get(card.dataset.id);
+    if (!l || !canControl(l)) return;
+    ensureOn(l);
+    if (key === "bri") writeBri(l, pctToByte(Number(inp.value)));
+    else if (key === "temp") writeMired(l, MIRED_WARM - Number(inp.value));
+    else if (key === "color") writeXy(l, rgbToXy(hexToRgb(inp.value)));
+    updateCard(l);
+    updateBar();
+  });
+
+  $("#scenes").addEventListener("click", e => {
+    const b = e.target.closest("[data-scene]");
+    if (!b) return;
+    const sc = SCENES.find(s => s.id === b.dataset.scene);
+    if (sc) applyScene(sc);
+  });
+
+  $("#all-power").addEventListener("click", () => {
+    const live = [...lights.values()].filter(canControl);
+    const target = !live.some(l => l.state.on);
+    for (const l of live) { writePower(l, target); updateCard(l); }
+    updateBar();
+  });
+
+  $("#add").addEventListener("click", () => addLight(false));
+  $("#add-all").addEventListener("click", () => addLight(true));
+
+  // ---- Start ----
+  async function checkSupport() {
+    const note = $("#support");
+    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    let msg = "";
+    if (!window.isSecureContext) {
+      msg = "Open this page from an https:// address. Browsers only allow Bluetooth on secure pages.";
+    } else if (!navigator.bluetooth) {
+      msg = ios
+        ? "iPhone and iPad browsers can't use Bluetooth from a web page. Open this on your Android phone, or in Chrome on a computer."
+        : "This browser can't use Bluetooth from a web page. Open it in Chrome on Android, Windows or Mac.";
+    } else if (navigator.bluetooth.getAvailability) {
+      try {
+        if (!(await navigator.bluetooth.getAvailability())) msg = "Bluetooth looks turned off. Turn it on, then reload this page.";
+      } catch (e) {}
+    }
+    if (msg) {
+      $("p", note).textContent = msg;
+      note.hidden = false;
+    }
+    const ok = !!navigator.bluetooth && window.isSecureContext;
+    $("#add").disabled = !ok;
+    $("#add-all").disabled = !ok;
+  }
+
+  addDemos();
+  buildScenes();
+  renderAll();
+  checkSupport();
+  restore();
+})();
+</script>
+</body>
+</html>
